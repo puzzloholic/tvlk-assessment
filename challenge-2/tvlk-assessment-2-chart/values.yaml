@@ -1,0 +1,146 @@
+sample-app:
+  enabled: true
+
+fluentd:
+  enabled: true
+  ## Fluentd list of plugins to install
+  ##
+  plugins:
+    - fluent-plugin-s3
+    - fluent-plugin-json-in-json-2
+  # - fluent-plugin-out-http
+
+  ## Additional environment variables to set for fluentd pods
+  envFrom:
+    - secretRef:
+        name: fluent-output-aws-cred
+
+  # Congigure the livessProbe
+  # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  livenessProbe:
+    httpGet:
+      path: /metrics
+      port: metrics
+    initialDelaySeconds: 300
+    # periodSeconds: 10
+    # timeoutSeconds: 1
+    # successThreshold: 1
+    # failureThreshold: 3
+
+  # Congigure the readinessProbe
+  # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  readinessProbe:
+    httpGet:
+      path: /metrics
+      port: metrics
+    initialDelaySeconds: 300
+    # periodSeconds: 10
+    # timeoutSeconds: 1
+    # successThreshold: 1
+    # failureThreshold: 3
+  fileConfigs:
+    01_sources.conf: |-
+      ## logs from podman
+      <source>
+        @type tail
+        @id in_tail_container_logs
+        @label @KUBERNETES
+        path /var/log/containers/*.log
+        pos_file /var/log/fluentd-containers.log.pos
+        tag kubernetes.*
+        read_from_head true
+        <parse>
+          @type multi_format
+          <parse>
+            @type "#{ENV['FLUENT_CONTAINER_TAIL_PARSER_TYPE'] || 'json_in_json'}"
+            time_format %Y-%m-%dT%H:%M:%S.%NZ
+          </parse>
+          <pattern>
+            format nginx
+          </pattern>
+          <pattern>
+            format json_in_json
+            time_key time
+            time_type string
+            time_format "%Y-%m-%dT%H:%M:%S.%NZ"
+            keep_time_key false
+          </pattern>
+          <pattern>
+            format regexp
+            expression /^(?<time>.+) (?<stream>stdout|stderr)( (.))? (?<log>.*)$/
+            time_format '%Y-%m-%dT%H:%M:%S.%NZ'
+            keep_time_key false
+          </pattern>
+        </parse>
+      </source>
+
+    02_filters.conf: |-
+      <label @KUBERNETES>
+        <match kubernetes.var.log.containers.fluentd**>
+          @type relabel
+          @label @FLUENT_LOG
+        </match>
+
+        # <match kubernetes.var.log.containers.**_kube-system_**>
+        #   @type null
+        #   @id ignore_kube_system_logs
+        # </match>
+
+        <filter kubernetes.**>
+          @type kubernetes_metadata
+          @id filter_kube_metadata
+          skip_labels false
+          skip_container_metadata false
+          skip_namespace_metadata true
+          skip_master_url true
+        </filter>
+
+        <match **>
+          @type relabel
+          @label @DISPATCH
+        </match>
+      </label>
+
+    03_dispatch.conf: |-
+      <label @DISPATCH>
+        <filter **>
+          @type prometheus
+          <metric>
+            name fluentd_input_status_num_records_total
+            type counter
+            desc The total number of incoming records
+            <labels>
+              tag ${tag}
+              hostname ${hostname}
+            </labels>
+          </metric>
+        </filter>
+
+        <match **>
+          @type relabel
+          @label @OUTPUT
+        </match>
+      </label>
+
+    04_outputs.conf: |-
+      <label @OUTPUT>
+        <match **>
+          @type s3
+          aws_key_id "#{ENV["OUTPUT_AWS_KEY_ID"]}"
+          aws_sec_key "#{ENV["OUTPUT_AWS_SECRET_KEY"]}"
+          s3_bucket tvlk-assessment-2
+          s3_region ap-southeast-1
+          path logs/
+          # if you want to use ${tag} or %Y/%m/%d/ like syntax in path / s3_object_key_format,
+          # need to specify tag for ${tag} and time for %Y/%m/%d in <buffer> argument.
+          <buffer tag,time>
+            @type file
+            path /var/log/fluent/s3
+            # timekey 3600 # 1 hour partition
+            timekey 60 # test config
+            timekey_wait 10s
+            timekey_use_utc true # use utc
+            chunk_limit_size 256m
+          </buffer>
+        </match>
+      </label>
