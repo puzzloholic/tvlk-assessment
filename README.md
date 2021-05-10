@@ -28,3 +28,15 @@ and/or a kubernetes deployment (plain manifest or helm chart)
 - You can use any 3rd party Docker image (you might have to explain your choice)
 - Bonus: use an IAC tool of your choice to create cloud resources you may need (e.g. S3
 buckets)
+
+---
+## Challenge 1: Github Stats
+- Create file named `repos.txt` with format one repo per input line, e.g. kubernetes/charts
+- Run following script
+```
+./run-challenge-1.sh
+```
+### Notes
+- If API exceeded rate limit, app will sleep until rate limit is reset
+
+## Challenge 2: Docker Nginx + Log Management

@@ -46,4 +46,4 @@ echo "repo_name,clone_url,commit_date,commit_author"
 while read REPO_NAME; do
     stats "$REPO_NAME"
     # ((i=i%N)); ((i++==0)) && wait
-done < repos.txt
+done < /data/repos.txt
