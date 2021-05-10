@@ -29,8 +29,10 @@ and/or a kubernetes deployment (plain manifest or helm chart)
 - Bonus: use an IAC tool of your choice to create cloud resources you may need (e.g. S3
 buckets)
 
----
+![traveloka](https://ik.imagekit.io/tvlk/blog/2020/01/Traveloka_Primary_Logo.png?tr=dpr-1,w-675)
+# Solution
 ## Challenge 1: Github Stats
+### How-To
 - Create file named `repos.txt` with format one repo per input line, e.g. kubernetes/charts
 - Run following script
 ```
@@ -39,4 +41,25 @@ buckets)
 ### Notes
 - If API exceeded rate limit, app will sleep until rate limit is reset
 
+---
 ## Challenge 2: Docker Nginx + Log Management
+### Prerequisite
+- Terraform v0.15.3
+- kubectl with valid kubernetes cluster configuration
+- helm v3.5.4
+### How-To
+- Populate `.env`
+- Run following script
+```
+./run-challenge-2.sh
+```
+
+### Notes
+- Application can be viewed by running following command
+```
+kubectl port-forward svc/tvlk-assessment-2-sample-app 8080:80
+```
+- Go to this address
+```
+localhost:8080
+``` 
