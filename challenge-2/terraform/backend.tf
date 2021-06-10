@@ -2,24 +2,34 @@ terraform {
   required_version = ">= 0.14.8"
 
   required_providers {
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+      version = "2.3.1"
+    }
     helm = {
       source  = "hashicorp/helm"
       version = "=2.1.2"
     }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 3.0"
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.7.0"
     }
   }
+}
+
+provider "kubernetes" {
+  config_path    = "~/.kube/config"
+  config_context = var.kubectl_context
 }
 
 provider "helm" {
   kubernetes {
     config_path    = "~/.kube/config"
-    config_context = "minikube"
+    config_context = var.kubectl_context
   }
 }
 
-provider "aws" {
-  region = "ap-southeast-1"
+provider "kubectl" {
+  config_path    = "~/.kube/config"
+  config_context = var.kubectl_context
 }

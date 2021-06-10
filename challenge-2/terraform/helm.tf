@@ -1,28 +1,43 @@
-resource "helm_release" "tvlk_assessment_2" {
-  name       = "tvlk-assessment-2"
-  chart      = "../tvlk-assessment-2-chart"
-  version    = "0.1.0"
-
-  values = [
-    file("../tvlk-assessment-2-chart/values.yaml")
-  ]
+resource "helm_release" "sample_app" {
+  name       = "sample-app"
+  chart      = "../sample-app/helm-chart"
+  namespace  = kubernetes_namespace.tvlk_dev.metadata[0].name
+  version    = "0.1.1"
 
   set {
-    name  = "sample-app.image.repository"
+    name  = "image.repository"
     value = var.sample_app_image_repo
   }
 
-  set {
-    name  = "fluentd.output.awsKey"
-    value = var.fluentd_output_awsKey
-  }
+  depends_on = [
+    kubernetes_namespace.tvlk_dev,
+  ]
+}
 
-  set {
-    name  = "fluentd.output.awsSecret"
-    value = var.fluentd_output_awsSecret
-  }
+resource "helm_release" "fluentd" {
+  name       = "fluentd"
+  repository = "https://fluent.github.io/helm-charts"
+  chart      = "fluentd"
+  namespace  = kubernetes_namespace.utility.metadata[0].name
+  version    = "0.2.6"
 
-#   depends_on = [
-#     aws_s3_bucket.tvlk_assessment_2,
-#   ]
+  values = [
+    file("yaml/helm-values/fluentd.yaml")
+  ]
+
+  depends_on = [
+    kubernetes_namespace.utility,
+  ]
+}
+
+resource "helm_release" "eck_operator" {
+  name       = "eck-operator"
+  repository = "https://helm.elastic.co"
+  chart      = "eck-operator"
+  namespace  = kubernetes_namespace.elastic_system.metadata[0].name
+  version    = "1.6.0"
+
+  depends_on = [
+    kubernetes_namespace.elastic_system,
+  ]
 }

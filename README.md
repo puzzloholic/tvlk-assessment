@@ -48,18 +48,35 @@ buckets)
 - kubectl with valid kubernetes cluster configuration
 - helm v3.5.4
 ### How-To
-- Populate `.env`
+- Populate `.env` from `.env.example`
 - Run following script
 ```
 ./run-challenge-2.sh
 ```
 
 ### Notes
-- Application can be viewed by running following command
+Sample Application can be viewed by running following command
 ```
-kubectl port-forward svc/tvlk-assessment-2-sample-app 8080:80
+kubectl port-forward -n tvlk-dev svc/sample-app 8080:80
 ```
-- Go to this address
+Go to this address to view Sample Application in the browser
 ```
 localhost:8080
-``` 
+```
+
+Logs is directed to Elasticsearch and can be viewed in Kibana
+Kibana can be viewed by running following command
+```
+kubectl port-forward -n elastic-system svc/tvlk-kb-http 5601
+```
+Go to this address to view Kibana in browser
+```
+https://localhost:5601
+```
+*Please ignore invalid certificate warning as it still using self signed certificate*
+
+Kibana user is `elastic` and the password can be viewed with this command
+```
+kubectl -n elastic-system get secret tvlk-es-elastic-user -o=jsonpath='{.data.elastic}' | base64 --decode; echo
+```
+Add index pattern `logstash-*` to see the logs output from fluentd
